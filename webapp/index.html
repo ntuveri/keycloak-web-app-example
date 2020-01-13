@@ -1,0 +1,238 @@
+<!--
+  ~ Copyright 2016 Red Hat, Inc. and/or its affiliates
+  ~ and other contributors as indicated by the @author tags.
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~ http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+
+<html>
+<head>
+	<!-- v5 -->
+    <!-- <script src="http://localhost:8080/auth/js/keycloak.js"></script> -->
+	<!-- v8 -->
+    <script src="http://localhost:8090/auth/js/keycloak.js"></script>
+</head>
+<body>
+
+<div>
+    <button onclick="login('offline_access tpm')">Login to TPM</button>
+	<button onclick="login('pass profile email')">Login to PASS</button>
+    <button onclick="keycloak.logout()">Logout</button>
+    <button onclick="keycloak.register()">Register</button>
+    <button onclick="keycloak.accountManagement()">Account</button>
+    <button onclick="refreshToken(9999)">Refresh Token</button>
+    <button onclick="refreshToken(30)">Refresh Token (if <30s validity)</button>
+    <button onclick="loadProfile()">Get Profile</button>
+    <button onclick="updateProfile()">Update profile</button>
+    <button onclick="loadUserInfo()">Get User Info</button>
+    <button onclick="output(keycloak.tokenParsed)">Show Token</button>
+    <button onclick="output(keycloak.refreshTokenParsed)">Show Refresh Token</button>
+    <button onclick="output(keycloak.idTokenParsed)">Show ID Token</button>
+    <button onclick="showExpires()">Show Expires</button>
+    <button onclick="output(keycloak)">Show Details</button>
+    <button onclick="introspect()">Introspect</button>
+	<button onclick="output(keycloak.createLoginUrl())">Show Login URL</button>
+    <button onclick="output(keycloak.createLogoutUrl())">Show Logout URL</button>
+    <button onclick="output(keycloak.createRegisterUrl())">Show Register URL</button>
+    <button onclick="output(keycloak.createAccountUrl())">Show Account URL</button>
+
+</div>
+
+<h2>Result</h2>
+<pre style="background-color: #ddd; border: 1px solid #ccc; padding: 10px; word-wrap: break-word; white-space: pre-wrap;" id="output"></pre>
+
+<h2>Events</h2>
+<pre style="background-color: #ddd; border: 1px solid #ccc; padding: 10px; word-wrap: break-word; white-space: pre-wrap;" id="events"></pre>
+
+
+<script>
+	function saveTokens(kc) {
+		window.sessionStorage.setItem('token', kc.token);
+		window.sessionStorage.setItem('refreshToken', kc.refreshToken);
+		window.sessionStorage.setItem('idToken', kc.idToken);
+		
+		window.sessionStorage.setItem('tokenParsed', JSON.stringify(kc.tokenParsed));
+		window.sessionStorage.setItem('refreshTokenParsed', JSON.stringify(kc.refreshTokenParsed));
+		window.sessionStorage.setItem('idTokenParsed', JSON.stringify(kc.idTokenParsed));
+	}
+	
+	function restoreTokens(kc) {
+		
+		kc.token = window.sessionStorage.getItem('token');
+		kc.refreshToken = window.sessionStorage.getItem('refreshToken');
+		kc.idToken = window.sessionStorage.getItem('idToken');
+		
+		kc.tokenParsed = JSON.parse(window.sessionStorage.getItem('tokenParsed'));
+		kc.refreshTokenParsed = JSON.parse(window.sessionStorage.getItem('refreshTokenParsed'));
+		kc.idTokenParsed = JSON.parse(window.sessionStorage.getItem('idTokenParsed'));
+		
+		kc.timeSkew = 0;
+	}
+
+    function login(scope) {
+		var loginOptions = {  
+			scope: scope
+		};
+	
+		keycloak.login(loginOptions);
+    }
+	
+	function loadProfile() {
+        keycloak.loadUserProfile().then(function(profile) {
+            output(profile);
+        }).catch(function() {
+            output('Failed to load profile');
+        });
+    }
+
+    function updateProfile() {
+        var url = keycloak.createAccountUrl().split('?')[0];
+        var req = new XMLHttpRequest();
+        req.open('POST', url, true);
+        req.setRequestHeader('Accept', 'application/json');
+        req.setRequestHeader('Content-Type', 'application/json');
+        req.setRequestHeader('Authorization', 'bearer ' + keycloak.token);
+
+        req.onreadystatechange = function () {
+            if (req.readyState == 4) {
+                if (req.status == 200) {
+                    output('Success');
+                } else {
+                    output('Failed');
+                }
+            }
+        }
+
+        req.send('{"email":"myemail@foo.bar","firstName":"test","lastName":"bar"}');
+    }
+
+    function loadUserInfo() {
+        keycloak.loadUserInfo().then(function(userInfo) {
+            output(userInfo);
+        }).catch(function() {
+            output('Failed to load user info');
+        });
+    }
+	
+	function introspect() {
+        var url = keycloak.endpoints.token() + "/introspect";
+        var req = new XMLHttpRequest();
+        req.open('POST', url, true);
+        req.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+        
+        req.onreadystatechange = function () {
+            if (req.readyState == 4) {
+                output("Check network to see introspection response");
+            }
+        }
+
+        req.send("token=" + keycloak.token + "&client_id=tpm-api&client_secret=e06cd4a2-881d-4015-905d-ae3102403191");
+    }
+
+
+    function refreshToken(minValidity) {
+        keycloak.updateToken(minValidity).then(function(refreshed) {
+            if (refreshed) {
+                output(keycloak.tokenParsed);
+            } else {
+                output('Token not refreshed, valid for ' + Math.round(keycloak.tokenParsed.exp + keycloak.timeSkew - new Date().getTime() / 1000) + ' seconds');
+            }
+        }).catch(function() {
+            output('Failed to refresh token');
+        });
+    }
+
+    function showExpires() {
+        if (!keycloak.tokenParsed) {
+            output("Not authenticated");
+            return;
+        }
+
+        var o = 'Token Expires:\t\t' + new Date((keycloak.tokenParsed.exp + keycloak.timeSkew) * 1000).toLocaleString() + '\n';
+        o += 'Token Expires in:\t' + Math.round(keycloak.tokenParsed.exp + keycloak.timeSkew - new Date().getTime() / 1000) + ' seconds\n';
+
+        if (keycloak.refreshTokenParsed) {
+            o += 'Refresh Token Expires:\t' + new Date((keycloak.refreshTokenParsed.exp + keycloak.timeSkew) * 1000).toLocaleString() + '\n';
+            o += 'Refresh Expires in:\t' + Math.round(keycloak.refreshTokenParsed.exp + keycloak.timeSkew - new Date().getTime() / 1000) + ' seconds';
+        }
+
+        output(o);
+    }
+
+    function output(data) {
+        if (typeof data === 'object') {
+            data = JSON.stringify(data, null, '  ');
+        }
+        document.getElementById('output').innerHTML = data;
+    }
+
+    function event(event) {
+        var e = document.getElementById('events').innerHTML;
+        document.getElementById('events').innerHTML = new Date().toLocaleString() + "\t" + event + "\n" + e;
+    }
+
+    var keycloak = Keycloak();
+
+    keycloak.onAuthSuccess = function () {
+        event('Auth Success');
+		saveTokens(keycloak);
+    };
+
+    keycloak.onAuthError = function (errorData) {
+        event("Auth Error: " + JSON.stringify(errorData) );
+    };
+
+    keycloak.onAuthRefreshSuccess = function () {
+        event('Auth Refresh Success');
+    };
+
+    keycloak.onAuthRefreshError = function () {
+        event('Auth Refresh Error');
+    };
+
+    keycloak.onAuthLogout = function () {
+        event('Auth Logout');
+    };
+
+    keycloak.onTokenExpired = function () {
+        event('Access token expired.');
+    };
+
+    // Flow can be changed to 'implicit' or 'hybrid', but then client must enable implicit flow in admin console too 
+    var initOptions = {
+        responseMode: 'fragment',
+        flow: 'standard',
+		promiseType: 'native', 
+		pkceMethod: 'S256',
+		// 'check-sso' only authenticate the client if the user is already logged-in
+		// if the user is not logged-in the browser will be redirected back to the application and remain unauthenticated.
+		// onLoad: 'check-sso', 
+		// 'login-required' authenticate the client if the user is logged-in or display the login page if not
+		// onLoad: 'login-required', 
+		// silentCheckSsoRedirectUri: window.location.origin + '/silent-check-sso.html',
+		// enable/disable monitoring login state; creates an hidden iframe that is used to detect if a Single-Sign Out has occurred
+		checkLoginIframe: false 
+    };
+
+    keycloak.init(initOptions).then(function(authenticated) {
+        output('Init Success (' + (authenticated ? 'Authenticated' : 'Not Authenticated') + ')');		
+		restoreTokens(keycloak);
+    }).catch(function() {
+        output('Init Error');
+    });
+
+</script>
+
+
+</body>
+</html>
