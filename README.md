@@ -1,7 +1,11 @@
 # keycloak-web-app-example
 Simple web app demonstrating basic usage of the Keycloak javascript client library
 In this example the web app is supposed to run on localhost:8080, while Keycloak server is supposed to run on localhost:8090.
-To run Keycloak server on port 8090 use: `C:\keycloak-8.0.1\bin>standalone.bat -Djboss.socket.binding.port-offset=10`
+Keycloak versions 5 and 8 can be downloaded at: 
+    * [Keycloak server v8](https://www.keycloak.org/archive/downloads-8.0.1.html)
+    * [Keycloak server v5](https://www.keycloak.org/archive/downloads-5.0.0.html)
+
+To run Keycloak server on port 8090 this command can be used: `C:\keycloak-8.0.1\bin>standalone.bat -Djboss.socket.binding.port-offset=10`
 
 This repository contains:
      
@@ -15,7 +19,7 @@ This repository contains:
 
 Below is the relevant documentation:
     * [Docs ](https://www.keycloak.org/docs/latest/securing_apps/#javascript-adapter-reference)
-    * [Original version of the example web app](https://github.com/keycloak/keycloak/tree/master/examples/js-console)
+    * Original version of the [example web app](https://github.com/keycloak/keycloak/tree/master/examples/js-console)
 
 
 
