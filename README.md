@@ -1,5 +1,5 @@
 # keycloak-web-app-example
-Simple web app demonstrating basic usage of the Keycloak javascript client library
+Simple web app demonstrating basic usage of the Keycloak javascript client library.
 In this example the web app is supposed to run on localhost:8080, while Keycloak server is supposed to run on localhost:8090.
 Keycloak versions 5 and 8 can be downloaded at: 
 - [Keycloak server v8](https://www.keycloak.org/archive/downloads-8.0.1.html)
@@ -18,7 +18,7 @@ This repository contains:
 
 
 Below is the relevant documentation:
-- [Docs](https://www.keycloak.org/docs/latest/securing_apps/#javascript-adapter-reference)
+- [Docs](https://www.keycloak.org/docs/latest/securing_apps/#_javascript_adapter)
 - Original version of the [example web app](https://github.com/keycloak/keycloak/tree/master/examples/js-console)
 
 
